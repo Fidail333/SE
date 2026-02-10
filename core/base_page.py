@@ -10,20 +10,44 @@ from core.config import get_settings
 
 
 class BasePage:
+    _DEFAULT_PAGE_ANCHOR_SELECTORS = ("header", "nav", "main", "h1")
+
     def __init__(self, page: Page) -> None:
         self.page = page
         self.settings = get_settings()
 
     def open_path(self, path: str = "/") -> None:
         target = urljoin(f"{self.settings.base_url}/", path.lstrip("/"))
+        navigation_timeout_ms = max(self.settings.navigation_timeout_ms, 30000)
         with allure.step(f"Открыть URL: {target}"):
-            self.page.goto(target, wait_until="domcontentloaded")
-            self.page.wait_for_load_state("networkidle", timeout=min(self.settings.navigation_timeout_ms, 15000))
+            self.page.goto(target, wait_until="domcontentloaded", timeout=navigation_timeout_ms)
+            self.page.wait_for_load_state("load", timeout=navigation_timeout_ms)
+            self.wait_for_page_anchor(timeout_ms=navigation_timeout_ms)
             self._handle_overlays()
             self._skip_if_antibot_detected()
 
     def wait_ready(self) -> None:
         expect(self.page.locator("body")).to_be_visible()
+
+    def wait_for_page_anchor(
+        self,
+        timeout_ms: int | None = None,
+        selectors: tuple[str, ...] | None = None,
+    ) -> None:
+        timeout = timeout_ms or max(self.settings.navigation_timeout_ms, 30000)
+        anchor_selectors = selectors or self._DEFAULT_PAGE_ANCHOR_SELECTORS
+
+        with allure.step(f"Дождаться якорного элемента страницы: {', '.join(anchor_selectors)}"):
+            for selector in anchor_selectors:
+                anchor = self.page.locator(selector).first
+                if anchor.count() > 0:
+                    expect(anchor).to_be_visible(timeout=timeout)
+                    return
+
+        raise AssertionError(
+            "Не найден якорный элемент после навигации. "
+            f"Проверены селекторы: {', '.join(anchor_selectors)}"
+        )
 
     def _handle_overlays(self) -> None:
         with allure.step("Проверить и закрыть cookie/pop-up баннеры (если есть)"):
