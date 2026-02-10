@@ -1,142 +1,64 @@
-# SE UI Autotests (Playwright + Pytest + Allure)
+# SE URL Health Autotests (Pytest + Requests + Allure)
 
-Production-grade проект автотестов для **sport-express.ru** (СЭ) с упором на стабильность и масштабируемую архитектуру.
+Стабильные автотесты для **sport-express.ru**. Основная проверка построена на HTTP/HTML health checks по фиксированному списку URL (без flaky UI-ожиданий `networkidle`).
 
-## Стек
-- Python 3.11+
-- Playwright
-- pytest
-- allure-pytest
-- ruff + mypy + pre-commit
+## Что проверяется
 
-## Архитектура
+- Разрешены редиректы `301/302/307/308`, но финальный ответ должен быть `200`.
+- Запрещены любые `5xx`.
+- `Content-Type` должен содержать `text/html` или `application/xhtml+xml`.
+- HTML должен быть непустым (`len(body) > 2000`).
+- Обязательны `<html`, `<body` и непустой `<title>`.
+- Негативный URL `https://www.sport-express.ru/asdasdasd/` должен вернуть `404` или `410`.
 
-```text
-core/       # config, базовые классы, логирование, allure helpers
-fixtures/   # browser/context/page fixtures
-pages/      # Page Objects
-data/       # тестовые данные
-utils/      # wait/retry/attachments utils
-tests/
-  smoke/    # критичный smoke (8-12)
-  regression/
-  ui/
-```
+Все кейсы сохраняют в Allure артефакты: `final_url`, `status`, `headers`, `html`.
 
-## Сценарии покрытия
+## Марки
 
-- **Главная**: доступность, ключевые блоки, навигация по разделам.
-- **Поиск**: позитивные и негативные запросы, открытие результата.
-- **Материалы**: title/date/content, author/tags/breadcrumbs (если есть).
-- **Турниры/матчи**: базовая доступность страниц.
-- **Негатив**: 404.
-- **Авторизация**: безопасный placeholder (только при наличии секретов в env).
+- `@pytest.mark.regression` — весь набор URL health checks.
+- `@pytest.mark.smoke` — топ-10 URL + негативный кейс.
+- Старые UI-тесты помечены `skip(reason="replaced by URL health checks")`.
 
-Общее покрытие: ~30 тест-кейсов (за счёт параметризации).
+## Быстрый старт
 
-## Быстрый старт (Windows 10/11)
-
-### 1) Установить Python 3.11+
-Проверьте:
-
-```powershell
-python --version
-```
-
-### 2) Создать venv и активировать
-
-**PowerShell:**
-```powershell
+```bash
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
 
-**cmd:**
-```cmd
-python -m venv .venv
-.venv\Scripts\activate.bat
-```
-
-### 3) Установить зависимости
-
-```powershell
 python -m pip install --upgrade pip
 pip install -e .[dev]
-python -m playwright install chromium
 ```
 
-### 4) Настроить переменные окружения
+## Локальный запуск
 
-```powershell
-copy .env.example .env
-```
+Запуск всего набора:
 
-Опционально поменяйте `.env`:
-- `HEADLESS=false` для визуального прогона
-- `SLOWMO=200` для замедления действий
-- `BASE_URL` при необходимости
-
-## Запуск тестов
-
-### Одна команда на запуск
-```powershell
+```bash
 python -m pytest
 ```
 
-или через helper:
-```powershell
-python scripts/run_tests.py
-```
+Только smoke:
 
-### Только smoke
-```powershell
+```bash
 python -m pytest -m smoke
 ```
 
-### Только regression
-```powershell
+Только regression:
+
+```bash
 python -m pytest -m regression
 ```
 
-### Параллельный запуск (опционально)
-```powershell
-python -m pytest -n 2 -m regression
-```
+## Allure локально
 
-## Allure отчёт
-
-### Генерация/открытие
-```powershell
+```bash
+python -m pytest --alluredir=allure-results
 allure serve allure-results
 ```
 
-Если Allure CLI не установлен:
-- через Scoop: `scoop install allure`
-- или через Chocolatey: `choco install allure-commandline`
+Статический отчёт:
 
-## Стабильность и anti-flaky подход
-
-- Нет `sleep()`; только explicit ожидания Playwright (`expect`).
-- Устойчивые локаторы: `role/text` + fallback на CSS.
-- Ограниченные ретраи: только на потенциально нестабильных тестах, `reruns=1`.
-- Таймауты централизованы в `.env`.
-- На падении автоматом прикладываются:
-  - screenshot,
-  - HTML source,
-  - browser console,
-  - network failures.
-
-## CI (GitHub Actions)
-
-Workflow `.github/workflows/ci.yml` запускает:
-1. ruff
-2. mypy
-3. smoke-тесты
-4. загрузку `allure-results` как artifact
-
-## Troubleshooting
-
-- **`Executable doesn't exist`** → выполните `python -m playwright install chromium`.
-- **Тесты падают по UI-изменениям** → обновите локаторы в `pages/` (локаторы вынесены и легко адаптируются).
-- **Нет логина в UI / изменился flow** → auth-тест скипается при пустых `SE_AUTH_USERNAME/SE_AUTH_PASSWORD`.
-
+```bash
+allure generate allure-results -o allure-report --clean
+```

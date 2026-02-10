@@ -5,6 +5,9 @@ import os
 import allure
 import pytest
 
+pytestmark = pytest.mark.skip(reason="replaced by URL health checks")
+
+
 from data.tournaments import TOURNAMENT_PATHS
 from pages.error_page import ErrorPage
 from pages.home_page import HomePage
