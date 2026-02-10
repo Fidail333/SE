@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "se-ui-autotests"
+version = "0.1.0"
+description = "Production-grade UI autotests for sport-express.ru with Playwright + Pytest + Allure"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "playwright>=1.50.0",
+  "pytest>=8.3.4",
+  "allure-pytest>=2.13.5",
+  "python-dotenv>=1.0.1",
+  "pytest-rerunfailures>=15.0",
+  "pytest-xdist>=3.6.1",
+  "requests>=2.32.3",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.9.10",
+  "mypy>=1.15.0",
+  "pre-commit>=4.1.0",
+  "types-requests>=2.32.0.20241016",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers --alluredir=allure-results"
+markers = [
+  "smoke: critical smoke checks",
+  "regression: wider regression checks",
+  "ui: ui tests",
+  "flaky: potentially unstable tests with controlled rerun",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+show_error_codes = true
+exclude = ["^\\.venv/"]
