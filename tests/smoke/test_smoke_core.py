@@ -3,6 +3,9 @@ from __future__ import annotations
 import allure
 import pytest
 
+pytestmark = pytest.mark.skip(reason="replaced by URL health checks")
+
+
 from data.sections import MAIN_SECTIONS
 from pages.home_page import HomePage
 from pages.material_page import MaterialPage

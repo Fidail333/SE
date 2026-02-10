@@ -1,4 +1,4 @@
-name: UI tests + Allure
+name: Tests + Allure
 
 permissions:
   contents: read
@@ -9,9 +9,7 @@ on:
   push:
     branches: ["**"]
   pull_request:
-    branches: ["main", "master"]
-  schedule:
-    - cron: "0 3 * * *"
+    branches: ["**"]
   workflow_dispatch:
 
 jobs:
@@ -34,28 +32,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Playwright Chromium
-        run: |
-          python -m playwright install --with-deps chromium
-
-      - name: Run pytest (collect Allure results)
-        continue-on-error: true
+      - name: Run pytest (all tests)
         env:
-          HEADLESS: "true"
           BASE_URL: "https://www.sport-express.ru"
-          SLOWMO: "0"
         run: |
-          python -m pytest -m smoke --alluredir=allure-results
-
-      - name: Run pytest regression (collect Allure results)
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-        continue-on-error: true
-        env:
-          HEADLESS: "true"
-          BASE_URL: "https://www.sport-express.ru"
-          SLOWMO: "0"
-        run: |
-          python -m pytest -m regression --alluredir=allure-results
+          python -m pytest --alluredir=allure-results
 
       - name: Install Allure CLI
         if: always()
@@ -73,7 +54,14 @@ jobs:
         run: |
           allure generate allure-results -o allure-report --clean || true
 
-      - name: Upload Allure report (artifact)
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Upload Allure report
         if: always()
         uses: actions/upload-artifact@v4
         with:
