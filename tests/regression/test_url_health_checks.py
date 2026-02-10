@@ -7,7 +7,12 @@ import allure
 import pytest
 
 from data.urls import NEGATIVE_URL, SMOKE_URLS_COUNT, URL_CASES
-from utils.http_health import assert_positive_html_health, request_with_retry
+from utils.http_health import (
+    ResolvedHealthRules,
+    assert_positive_html_health,
+    request_with_retry,
+    resolve_health_rules,
+)
 
 
 pytestmark = pytest.mark.regression
@@ -32,6 +37,27 @@ def _attach_response_artifacts(url: str, status: int, final_url: str, headers: d
     allure.attach(body, name="html", attachment_type=allure.attachment_type.HTML)
 
 
+def _attach_rules_artifacts(resolved: ResolvedHealthRules) -> None:
+    rules_payload = {
+        "require_html_body": resolved.rules.require_html_body,
+        "require_content_type": resolved.rules.require_content_type,
+        "min_body_length": resolved.rules.min_body_length,
+        "is_special": resolved.is_special,
+        "reason": resolved.reason,
+    }
+    allure.attach(
+        json.dumps(rules_payload, ensure_ascii=False, indent=2),
+        name="rules_used",
+        attachment_type=allure.attachment_type.JSON,
+    )
+
+    if resolved.is_special:
+        allure.dynamic.label("health_rules", "special")
+        with allure.step("Special health rules applied (dynamic or non-HTML page)"):
+            if resolved.reason:
+                allure.attach(resolved.reason, name="special_rules_reason", attachment_type=allure.attachment_type.TEXT)
+
+
 URL_PARAMS = [
     pytest.param(
         url,
@@ -48,6 +74,7 @@ URL_PARAMS = [
 def test_url_health(url: str) -> None:
     allure.dynamic.title(f"URL health: {_case_id(url)}")
     response = request_with_retry(url)
+    resolved_rules = resolve_health_rules(url)
 
     _attach_response_artifacts(
         url=url,
@@ -56,8 +83,9 @@ def test_url_health(url: str) -> None:
         headers=response.headers,
         body=response.body,
     )
+    _attach_rules_artifacts(resolved_rules)
 
-    assert_positive_html_health(response)
+    assert_positive_html_health(response, resolved_rules=resolved_rules)
 
 
 @allure.epic("SE URL Health")
