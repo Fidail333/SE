@@ -1,44 +1,142 @@
-# Автотесты для sport-express.ru (Python + pytest-playwright)
+# SE UI Autotests (Playwright + Pytest + Allure)
 
-Проект использует **Page Object Model**:
-- `pages/` — page objects
-- `tests/` — E2E/UI smoke-тесты
+Production-grade проект автотестов для **sport-express.ru** (СЭ) с упором на стабильность и масштабируемую архитектуру.
 
-## Что проверяется
+## Стек
+- Python 3.11+
+- Playwright
+- pytest
+- allure-pytest
+- ruff + mypy + pre-commit
 
-1. Главная страница открывается, есть header/логотип.
-2. Поиск: открыть поиск, ввести `Зенит`, убедиться, что есть страница/результаты.
-3. Раздел `Футбол` открывается.
-4. Открывается страница новости (берётся первая доступная ссылка новости на главной).
-5. На главной есть footer.
+## Архитектура
 
-Тесты сделаны без привязки к конкретным новостям и используют устойчивые локаторы (role/aria/text + URL-паттерны).
+```text
+core/       # config, базовые классы, логирование, allure helpers
+fixtures/   # browser/context/page fixtures
+pages/      # Page Objects
+data/       # тестовые данные
+utils/      # wait/retry/attachments utils
+tests/
+  smoke/    # критичный smoke (8-12)
+  regression/
+  ui/
+```
 
-## Установка (Windows через WSL)
+## Сценарии покрытия
 
-```bash
-# WSL (Ubuntu)
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+- **Главная**: доступность, ключевые блоки, навигация по разделам.
+- **Поиск**: позитивные и негативные запросы, открытие результата.
+- **Материалы**: title/date/content, author/tags/breadcrumbs (если есть).
+- **Турниры/матчи**: базовая доступность страниц.
+- **Негатив**: 404.
+- **Авторизация**: безопасный placeholder (только при наличии секретов в env).
+
+Общее покрытие: ~30 тест-кейсов (за счёт параметризации).
+
+## Быстрый старт (Windows 10/11)
+
+### 1) Установить Python 3.11+
+Проверьте:
+
+```powershell
+python --version
+```
+
+### 2) Создать venv и активировать
+
+**PowerShell:**
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+**cmd:**
+```cmd
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+### 3) Установить зависимости
+
+```powershell
+python -m pip install --upgrade pip
+pip install -e .[dev]
 python -m playwright install chromium
 ```
 
-## Запуск тестов
+### 4) Настроить переменные окружения
 
-```bash
-# Базовый запуск
-pytest -s -v --browser chromium
-
-# В headed-режиме
-pytest -s -v --browser chromium --headed
-
-# С замедлением действий (slowmo)
-pytest -s -v --browser chromium --headed --slowmo 250
+```powershell
+copy .env.example .env
 ```
 
-## Примечания
+Опционально поменяйте `.env`:
+- `HEADLESS=false` для визуального прогона
+- `SLOWMO=200` для замедления действий
+- `BASE_URL` при необходимости
 
-- Используются ожидания Playwright (`expect(...)`) по состоянию элементов/URL.
-- `sleep` не используется.
-- Запросы к сайту сведены к минимуму (smoke-набор, без лишних переходов).
+## Запуск тестов
+
+### Одна команда на запуск
+```powershell
+python -m pytest
+```
+
+или через helper:
+```powershell
+python scripts/run_tests.py
+```
+
+### Только smoke
+```powershell
+python -m pytest -m smoke
+```
+
+### Только regression
+```powershell
+python -m pytest -m regression
+```
+
+### Параллельный запуск (опционально)
+```powershell
+python -m pytest -n 2 -m regression
+```
+
+## Allure отчёт
+
+### Генерация/открытие
+```powershell
+allure serve allure-results
+```
+
+Если Allure CLI не установлен:
+- через Scoop: `scoop install allure`
+- или через Chocolatey: `choco install allure-commandline`
+
+## Стабильность и anti-flaky подход
+
+- Нет `sleep()`; только explicit ожидания Playwright (`expect`).
+- Устойчивые локаторы: `role/text` + fallback на CSS.
+- Ограниченные ретраи: только на потенциально нестабильных тестах, `reruns=1`.
+- Таймауты централизованы в `.env`.
+- На падении автоматом прикладываются:
+  - screenshot,
+  - HTML source,
+  - browser console,
+  - network failures.
+
+## CI (GitHub Actions)
+
+Workflow `.github/workflows/ci.yml` запускает:
+1. ruff
+2. mypy
+3. smoke-тесты
+4. загрузку `allure-results` как artifact
+
+## Troubleshooting
+
+- **`Executable doesn't exist`** → выполните `python -m playwright install chromium`.
+- **Тесты падают по UI-изменениям** → обновите локаторы в `pages/` (локаторы вынесены и легко адаптируются).
+- **Нет логина в UI / изменился flow** → auth-тест скипается при пустых `SE_AUTH_USERNAME/SE_AUTH_PASSWORD`.
+
