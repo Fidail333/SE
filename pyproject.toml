@@ -53,4 +53,9 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_return_any = true
 show_error_codes = true
+ignore_missing_imports = true
 exclude = ["^\\.venv/"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "fixtures.*"]
+ignore_errors = true

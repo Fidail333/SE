@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 from collections.abc import Generator
+from pathlib import Path
 
 import pytest
+from allure_commons.types import AttachmentType
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
+from core.allure_helpers import attach_file, attach_page_source, attach_screenshot, attach_text
 from core.config import Settings, get_settings
 
 
@@ -46,10 +49,12 @@ def context(browser: Browser, settings: Settings) -> Generator[BrowserContext, N
 
 
 @pytest.fixture()
-def page(context: BrowserContext) -> Generator[Page, None, None]:
+def page(context: BrowserContext, request: pytest.FixtureRequest) -> Generator[Page, None, None]:
     console_messages: list[str] = []
     request_failures: list[dict[str, str]] = []
+    node = request.node
 
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = context.new_page()
     page.on("console", lambda msg: console_messages.append(f"[{msg.type}] {msg.text}"))
     page.on(
@@ -63,9 +68,19 @@ def page(context: BrowserContext) -> Generator[Page, None, None]:
         ),
     )
 
-    page.console_messages = console_messages  # type: ignore[attr-defined]
-    page.request_failures = request_failures  # type: ignore[attr-defined]
     yield page
+
+    report = getattr(node, "rep_call", None)
+    trace_path = Path("allure-results") / f"trace-{node.nodeid.replace('/', '_').replace(':', '_')}.zip"
+    context.tracing.stop(path=str(trace_path))
+    if report and report.failed:
+        attach_screenshot(page, name="Скриншот при падении")
+        attach_page_source(page, name="HTML страницы при падении")
+        attach_text("Текущий URL", page.url)
+        attach_text("Логи консоли браузера", "\n".join(console_messages) if console_messages else "Логи отсутствуют")
+        attach_text("Ошибки сетевых запросов", json.dumps(request_failures, ensure_ascii=False, indent=2))
+        attach_file("Playwright trace", trace_path, AttachmentType.ZIP)
+
     page.close()
 
 
