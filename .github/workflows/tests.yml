@@ -7,9 +7,11 @@ permissions:
 
 on:
   push:
-    branches: ["main", "master"]
+    branches: ["**"]
   pull_request:
     branches: ["main", "master"]
+  schedule:
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 jobs:
@@ -37,12 +39,23 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Run pytest (collect Allure results)
+        continue-on-error: true
         env:
           HEADLESS: "true"
           BASE_URL: "https://www.sport-express.ru"
           SLOWMO: "0"
         run: |
-          python -m pytest --alluredir=allure-results
+          python -m pytest -m smoke --alluredir=allure-results
+
+      - name: Run pytest regression (collect Allure results)
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        continue-on-error: true
+        env:
+          HEADLESS: "true"
+          BASE_URL: "https://www.sport-express.ru"
+          SLOWMO: "0"
+        run: |
+          python -m pytest -m regression --alluredir=allure-results
 
       - name: Install Allure CLI
         if: always()
