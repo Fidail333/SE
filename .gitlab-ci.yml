@@ -1,0 +1,21 @@
+ui_tests:
+  image: python:latest
+
+  variables:
+    # Allure TestOps connection settings (token comes from GitLab CI/CD variables)
+    ALLURE_ENDPOINT: "https://testops.sport-express.ru"
+    ALLURE_PROJECT_ID: "6"
+    ALLURE_RESULTS: "allure-results"
+
+  before_script:
+    # Install Python project dependencies
+    - pip install -r requirements.txt
+    # Install Playwright browsers and required Linux packages
+    - playwright install --with-deps
+    # Download allurectl binary for Linux and make it executable
+    - curl -fsSL https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64 -o allurectl
+    - chmod +x allurectl
+
+  script:
+    # Run pytest only through allurectl watch to stream results to Allure TestOps
+    - ./allurectl watch -- pytest
