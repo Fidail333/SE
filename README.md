@@ -7,6 +7,14 @@
 
 Основной desktop-набор рассчитан на запуск с whitelisted IP.
 
+## Базовые окружения (`BASE_URL`)
+
+- Прод по умолчанию: `https://www.sport-express.ru/`
+- Локальное окружение: `http://www.sport-express.env0/`
+- Локальное окружение: `http://www.sport-express.env3/`
+
+Если `BASE_URL` не задан, используется прод `https://www.sport-express.ru/`.
+
 ## Что проверяется
 
 ### Desktop UI (`@pytest.mark.desktop`)
@@ -47,6 +55,24 @@ python -m playwright install chromium
 ```
 
 ## Локальный запуск
+
+Прод (по умолчанию):
+
+```bash
+python -m pytest --alluredir=allure-results
+```
+
+Локально на `env0`:
+
+```bash
+BASE_URL=http://www.sport-express.env0 python -m pytest --alluredir=allure-results
+```
+
+Локально на `env3`:
+
+```bash
+BASE_URL=http://www.sport-express.env3 python -m pytest --alluredir=allure-results
+```
 
 Все тесты:
 
