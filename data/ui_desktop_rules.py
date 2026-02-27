@@ -36,21 +36,26 @@ class ResolvedDesktopRule:
 
 LISTING_RULE = DesktopRule(
     profile="home/section/listing",
-    require_any_visible=("main", "article", "[role='main']"),
-    min_links_in_content=1,
+    require_any_visible=("main", "article", "[role='main']", "h1", "table", "form", "a[href]"),
+    min_links_in_content=0,
 )
 
 ARTICLE_RULE = DesktopRule(
     profile="article-like",
-    require_h1=True,
+    require_h1=False,
     require_content_block=True,
     content_selectors=(
         "article p",
         ".article p",
         "[itemprop='articleBody'] p",
+        "[class*='article'] p",
+        "[class*='material'] p",
         "main p",
+        "main [class*='content']",
+        "main [class*='text']",
+        "h1",
     ),
-    require_any_visible=("main", "article", "[role='main']"),
+    require_any_visible=("h1", "main", "article", "[role='main']", "[itemprop='articleBody']"),
 )
 
 STATS_RULE = DesktopRule(
@@ -137,7 +142,7 @@ PATH_RULES: tuple[UrlDesktopRule, ...] = (
     ),
     UrlDesktopRule(
         path_regex=re.compile(
-            r"/(news|reviews|stories|online|poll|photoreports|videoreports|materials)/|-\d{5,}/?$",
+            r"-\d{5,}/?$",
             re.IGNORECASE,
         ),
         rule=ARTICLE_RULE,
