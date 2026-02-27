@@ -15,6 +15,79 @@
 
 Если `BASE_URL` не задан, используется прод `https://www.sport-express.ru/`.
 
+## Запуск локально (для новичка)
+
+Ниже самый простой путь для `macOS/Linux`, если запускаете проект впервые.
+
+### 1) Склонировать проект
+
+```bash
+git clone <URL_репозитория>
+cd SE
+```
+
+### 2) Проверить, что есть Python 3.11+
+
+```bash
+python3 --version
+```
+
+Если команда не найдена, установите Python 3 и повторите.
+
+### 3) Создать виртуальное окружение и установить зависимости
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -e .[dev]
+python -m playwright install chromium
+```
+
+### 4) Запустить тесты на `env0`
+
+```bash
+rm -rf allure-results
+JS_HEALTH_MODE=warn HEADLESS=true TEST_ENV=env0 BASE_URL=http://www.sport-express.env0 python -m pytest -m "desktop and regression" --alluredir=allure-results
+```
+
+Если хотите видеть браузер во время прогона:
+
+```bash
+JS_HEALTH_MODE=warn HEADLESS=false TEST_ENV=env0 BASE_URL=http://www.sport-express.env0 python -m pytest -m "desktop and regression" --alluredir=allure-results
+```
+
+### 5) Открыть Allure-отчёт
+
+Если `allure` не установлен в системе, можно использовать локальный бинарник:
+
+```bash
+curl -L -o allure.tgz https://github.com/allure-framework/allure2/releases/download/2.29.0/allure-2.29.0.tgz
+tar -xzf allure.tgz
+./allure-2.29.0/bin/allure serve allure-results
+```
+
+Если `allure` уже установлен глобально, достаточно:
+
+```bash
+allure serve allure-results
+```
+
+### 6) (Опционально) Отправить результаты в TestOps
+
+Локальный `pytest --alluredir=...` сохраняет результаты только на вашей машине.  
+Для отправки в TestOps используйте `allurectl watch`:
+
+```bash
+ALLURE_ENDPOINT=https://testops.sport-express.ru \
+ALLURE_PROJECT_ID=15 \
+ALLURE_TOKEN=<TOKEN> \
+ALLURE_RESULTS=allure-results \
+TEST_ENV=env0 \
+BASE_URL=http://www.sport-express.env0 \
+./allurectl watch -- python -m pytest -m "desktop and regression" --alluredir=allure-results
+```
+
 ## Что проверяется
 
 ### Desktop UI (`@pytest.mark.desktop`)
@@ -50,7 +123,7 @@
 ## Быстрый старт
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
@@ -64,55 +137,55 @@ python -m playwright install chromium
 Прод (по умолчанию):
 
 ```bash
-python -m pytest --alluredir=allure-results
+python3 -m pytest --alluredir=allure-results
 ```
 
 Локально на `env0`:
 
 ```bash
-BASE_URL=http://www.sport-express.env0 python -m pytest --alluredir=allure-results
+BASE_URL=http://www.sport-express.env0 python3 -m pytest --alluredir=allure-results
 ```
 
 Локально на `env3`:
 
 ```bash
-BASE_URL=http://www.sport-express.env3 python -m pytest --alluredir=allure-results
+BASE_URL=http://www.sport-express.env3 python3 -m pytest --alluredir=allure-results
 ```
 
 Все тесты:
 
 ```bash
-python -m pytest
+python3 -m pytest
 ```
 
 Desktop smoke:
 
 ```bash
-python -m pytest -m "desktop and smoke"
+python3 -m pytest -m "desktop and smoke"
 ```
 
 Desktop regression:
 
 ```bash
-python -m pytest -m "desktop and regression"
+python3 -m pytest -m "desktop and regression"
 ```
 
 HTTP smoke:
 
 ```bash
-python -m pytest -m "http and smoke"
+python3 -m pytest -m "http and smoke"
 ```
 
 HTTP regression:
 
 ```bash
-python -m pytest -m "http and regression"
+python3 -m pytest -m "http and regression"
 ```
 
 Legacy наборы (по умолчанию `skip`):
 
 ```bash
-python -m pytest -m legacy -rs
+python3 -m pytest -m legacy -rs
 ```
 
 ## Проверка переноса русских шагов в TestOps
@@ -120,8 +193,8 @@ python -m pytest -m legacy -rs
 После прогона через `allurectl watch` проверьте результаты:
 
 ```bash
-python scripts/validate_allure_results.py --mode smoke --env env0 --results-dir allure-results
-python scripts/validate_allure_results.py --mode regression --env env0 --results-dir allure-results
+python3 scripts/validate_allure_results.py --mode smoke --env env0 --results-dir allure-results
+python3 scripts/validate_allure_results.py --mode regression --env env0 --results-dir allure-results
 ```
 
 Скрипт валидирует:
@@ -143,6 +216,6 @@ python scripts/validate_allure_results.py --mode regression --env env0 --results
 ## Allure локально
 
 ```bash
-python -m pytest --alluredir=allure-results
+python3 -m pytest --alluredir=allure-results
 allure serve allure-results
 ```
