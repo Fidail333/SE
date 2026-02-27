@@ -86,7 +86,9 @@ class BasePage:
         with allure.step(f"Дождаться якорного элемента страницы: {', '.join(anchor_selectors)}"):
             for selector in anchor_selectors:
                 anchor = self.page.locator(selector).first
-                if anchor.count() > 0:
+                if anchor.count() == 0:
+                    continue
+                if anchor.is_visible(timeout=1500):
                     expect(anchor).to_be_visible(timeout=timeout)
                     return
 
