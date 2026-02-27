@@ -26,6 +26,7 @@
 - Проверяются SEO-инварианты (`title`, `canonical`, `meta robots`).
 - Проверяются контентные инварианты (пустые/placeholder состояния, минимальная валидность контента).
 - Проверяется JS/Network health (console error + requestfailed с allowlist исключениями).
+  По умолчанию режим `warning` (`JS_HEALTH_MODE=warn`), строгий фейл-режим: `JS_HEALTH_MODE=strict`.
 - Формируется отдельный шаг `Сводка JS/Network`.
 - В Allure формируются русские шаги и артефакты навигации.
 

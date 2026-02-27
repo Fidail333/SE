@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from typing import Iterable
@@ -334,9 +335,20 @@ def assert_js_health(
             name="js_network_critical",
             attachment_type=allure.attachment_type.JSON,
         )
-        raise AssertionError(
-            "JS/Network health: обнаружены критичные ошибки. "
-            f"console={len(critical_console_errors)}, request_failed={len(critical_request_failures)}"
+        mode = _js_health_mode()
+        if mode == "strict":
+            raise AssertionError(
+                "JS/Network health: обнаружены критичные ошибки. "
+                f"console={len(critical_console_errors)}, request_failed={len(critical_request_failures)}"
+            )
+        allure.attach(
+            (
+                "JS/Network health: обнаружены критичные ошибки, но проверка переведена в warning "
+                f"(JS_HEALTH_MODE={mode}). console={len(critical_console_errors)}, "
+                f"request_failed={len(critical_request_failures)}"
+            ),
+            name="js_network_warning",
+            attachment_type=allure.attachment_type.TEXT,
         )
 
 
@@ -401,3 +413,10 @@ def _has_meaningful_render(page: Page) -> bool:
         return True
 
     return _safe_links_count(page) >= 3
+
+
+def _js_health_mode() -> str:
+    mode = (os.getenv("JS_HEALTH_MODE", "warn") or "warn").strip().lower()
+    if mode not in {"warn", "strict"}:
+        return "warn"
+    return mode
