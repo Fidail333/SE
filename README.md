@@ -23,6 +23,10 @@
 - Проверяется отсутствие антибота/капчи (fail-fast, без `skip`).
 - Проверяется базовая desktop-структура страницы.
 - Проверяется профиль страницы по rule-based модели (`home/section/listing`, `article-like`, `stats/live`, `service`).
+- Проверяются SEO-инварианты (`title`, `canonical`, `meta robots`).
+- Проверяются контентные инварианты (пустые/placeholder состояния, минимальная валидность контента).
+- Проверяется JS/Network health (console error + requestfailed с allowlist исключениями).
+- Формируется отдельный шаг `Сводка JS/Network`.
 - В Allure формируются русские шаги и артефакты навигации.
 
 ### HTTP Health (`@pytest.mark.http`)
@@ -115,8 +119,8 @@ python -m pytest -m legacy -rs
 После прогона через `allurectl watch` проверьте результаты:
 
 ```bash
-python scripts/validate_allure_results.py --mode smoke --results-dir allure-results
-python scripts/validate_allure_results.py --mode regression --results-dir allure-results
+python scripts/validate_allure_results.py --mode smoke --env env0 --results-dir allure-results
+python scripts/validate_allure_results.py --mode regression --env env0 --results-dir allure-results
 ```
 
 Скрипт валидирует:
@@ -125,6 +129,15 @@ python scripts/validate_allure_results.py --mode regression --results-dir allure
 - отсутствие `skipped` в desktop-наборе;
 - наличие `steps` в каждом desktop-кейсе;
 - наличие кириллицы минимум в одном шаге каждого desktop-кейса.
+- наличие обязательных step-паков (`Антибот`, `База`, `SEO`, `Content`, `JS`).
+- taxonomy падений (`infra/test/product`) и долю `uncategorized`.
+
+## CI матрица сред
+
+- `desktop_smoke_env0`, `desktop_smoke_env3` — blocking smoke на push/MR.
+- `desktop_smoke_prod` — наблюдение на schedule/web, `allow_failure=true`.
+- `desktop_regression_env0`, `desktop_regression_env3`, `desktop_regression_prod` — regression на schedule/web (prod наблюдательный).
+- `http_health` — быстрый отдельный сигнал по HTTP checks.
 
 ## Allure локально
 

@@ -26,49 +26,95 @@ stages:
     - curl -fsSL -o allurectl https://github.com/allure-framework/allurectl/releases/latest/download/allurectl_linux_amd64
     - chmod +x allurectl
 
-desktop_smoke_testops:
+.desktop_job:
   extends: .python_ui_allure
+  script:
+    - rm -rf allure-results
+    - export RUN_ID="${CI_PIPELINE_ID}-${CI_JOB_ID}"
+    - export ALLURE_LAUNCH_NAME="SE desktop ${TEST_ENV} ${TEST_MODE} #${CI_PIPELINE_ID}"
+    - export ALLURE_LAUNCH_TAGS="desktop,${TEST_ENV},${TEST_MODE},${CI_PIPELINE_SOURCE},${CI_PIPELINE_ID}"
+    - ./allurectl watch -- python -m pytest -m "desktop and ${TEST_MODE}" -v > "allurectl-${TEST_ENV}-${TEST_MODE}.log" 2>&1
+    - cat "allurectl-${TEST_ENV}-${TEST_MODE}.log"
+    - python scripts/validate_allure_results.py --mode "${TEST_MODE}" --env "${TEST_ENV}" --results-dir allure-results --summary-out "allure-summary-${TEST_ENV}-${TEST_MODE}.json"
+    - |
+      if ! grep -Eqi 'https?://[^ ]+launch' "allurectl-${TEST_ENV}-${TEST_MODE}.log"; then
+        echo "Allure launch URL was not found in ${TEST_ENV}/${TEST_MODE} log."
+        exit 1
+      fi
+  artifacts:
+    when: always
+    paths:
+      - allure-results/
+      - allurectl-*.log
+      - allure-summary-*.json
+
+desktop_smoke_env0:
+  extends: .desktop_job
+  variables:
+    TEST_ENV: "env0"
+    TEST_MODE: "smoke"
+    BASE_URL: "http://www.sport-express.env0/"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "push"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - when: never
-  script:
-    - rm -rf allure-results
-    - ./allurectl watch -- python -m pytest -m "desktop and smoke" -v > allurectl-smoke.log 2>&1
-    - cat allurectl-smoke.log
-    - python scripts/validate_allure_results.py --mode smoke --results-dir allure-results
-    - |
-      if ! grep -Eqi 'https?://[^ ]+launch' allurectl-smoke.log; then
-        echo "Allure launch URL was not found in smoke log."
-        exit 1
-      fi
-  artifacts:
-    when: always
-    paths:
-      - allure-results/
-      - allurectl-smoke.log
 
-desktop_regression_testops:
-  extends: .python_ui_allure
+desktop_smoke_env3:
+  extends: .desktop_job
+  variables:
+    TEST_ENV: "env3"
+    TEST_MODE: "smoke"
+    BASE_URL: "http://www.sport-express.env3/"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - when: never
+
+desktop_smoke_prod:
+  extends: .desktop_job
+  allow_failure: true
+  variables:
+    TEST_ENV: "prod"
+    TEST_MODE: "smoke"
+    BASE_URL: "https://www.sport-express.ru/"
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
     - if: '$CI_PIPELINE_SOURCE == "web"'
     - when: never
-  script:
-    - rm -rf allure-results
-    - ./allurectl watch -- python -m pytest -m "desktop and regression" -v > allurectl-regression.log 2>&1
-    - cat allurectl-regression.log
-    - python scripts/validate_allure_results.py --mode regression --results-dir allure-results
-    - |
-      if ! grep -Eqi 'https?://[^ ]+launch' allurectl-regression.log; then
-        echo "Allure launch URL was not found in regression log."
-        exit 1
-      fi
-  artifacts:
-    when: always
-    paths:
-      - allure-results/
-      - allurectl-regression.log
+
+desktop_regression_env0:
+  extends: .desktop_job
+  variables:
+    TEST_ENV: "env0"
+    TEST_MODE: "regression"
+    BASE_URL: "http://www.sport-express.env0/"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+
+desktop_regression_env3:
+  extends: .desktop_job
+  variables:
+    TEST_ENV: "env3"
+    TEST_MODE: "regression"
+    BASE_URL: "http://www.sport-express.env3/"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+
+desktop_regression_prod:
+  extends: .desktop_job
+  allow_failure: true
+  variables:
+    TEST_ENV: "prod"
+    TEST_MODE: "regression"
+    BASE_URL: "https://www.sport-express.ru/"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
 
 http_health:
   extends: .python_base
@@ -79,6 +125,7 @@ http_health:
     - if: '$CI_PIPELINE_SOURCE == "web"'
     - when: never
   script:
+    - rm -rf allure-results
     - |
       if [ "$CI_PIPELINE_SOURCE" = "schedule" ] || [ "$CI_PIPELINE_SOURCE" = "web" ]; then
         python -m pytest -m "http and regression" -v

@@ -5,6 +5,7 @@ from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+import allure
 from allure_commons.types import AttachmentType
 from playwright.sync_api import Browser, BrowserContext, Page, Playwright, sync_playwright
 
@@ -50,13 +51,23 @@ def context(browser: Browser, settings: Settings) -> Generator[BrowserContext, N
 
 @pytest.fixture()
 def page(context: BrowserContext, request: pytest.FixtureRequest) -> Generator[Page, None, None]:
-    console_messages: list[str] = []
+    console_events: list[dict[str, str]] = []
     request_failures: list[dict[str, str]] = []
     node = request.node
 
     context.tracing.start(screenshots=True, snapshots=True, sources=True)
     page = context.new_page()
-    page.on("console", lambda msg: console_messages.append(f"[{msg.type}] {msg.text}"))
+    setattr(page, "_se_console_events", console_events)
+    setattr(page, "_se_request_failures", request_failures)
+    page.on(
+        "console",
+        lambda msg: console_events.append(
+            {
+                "type": msg.type,
+                "text": msg.text,
+            }
+        ),
+    )
     page.on(
         "requestfailed",
         lambda request: request_failures.append(
@@ -73,11 +84,33 @@ def page(context: BrowserContext, request: pytest.FixtureRequest) -> Generator[P
     report = getattr(node, "rep_call", None)
     trace_path = Path("allure-results") / f"trace-{node.nodeid.replace('/', '_').replace(':', '_')}.zip"
     context.tracing.stop(path=str(trace_path))
+
+    console_errors = [entry for entry in console_events if entry.get("type") == "error"]
+    js_network_summary = {
+        "console_total": len(console_events),
+        "console_errors": len(console_errors),
+        "request_failed_total": len(request_failures),
+        "sample_console_errors": console_errors[:10],
+        "sample_failed_requests": request_failures[:10],
+    }
+    allure.attach(
+        json.dumps(js_network_summary, ensure_ascii=False, indent=2),
+        name="Сводка JS/Network",
+        attachment_type=AttachmentType.JSON,
+    )
+
     if report and report.failed:
         attach_screenshot(page, name="Скриншот при падении")
         attach_page_source(page, name="HTML страницы при падении")
         attach_text("Текущий URL", page.url)
-        attach_text("Логи консоли браузера", "\n".join(console_messages) if console_messages else "Логи отсутствуют")
+        attach_text(
+            "Логи консоли браузера",
+            (
+                "\n".join(f"[{entry['type']}] {entry['text']}" for entry in console_events)
+                if console_events
+                else "Логи отсутствуют"
+            ),
+        )
         attach_text("Ошибки сетевых запросов", json.dumps(request_failures, ensure_ascii=False, indent=2))
         attach_file("Playwright trace", trace_path, AttachmentType.ZIP)
 
@@ -86,5 +119,5 @@ def page(context: BrowserContext, request: pytest.FixtureRequest) -> Generator[P
 
 @pytest.fixture()
 def network_summary(page: Page) -> str:
-    failures = getattr(page, "request_failures", [])
+    failures = getattr(page, "_se_request_failures", [])
     return json.dumps(failures, ensure_ascii=False, indent=2)

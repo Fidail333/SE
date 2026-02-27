@@ -11,9 +11,14 @@ class DesktopRule:
     profile: str
     require_h1: bool = False
     require_content_block: bool = False
+    require_seo_checks: bool = True
+    require_content_checks: bool = True
+    require_js_health_checks: bool = True
     content_selectors: tuple[str, ...] = ()
     require_any_visible: tuple[str, ...] = ()
     min_links_in_content: int = 0
+    allowed_console_error_patterns: tuple[str, ...] = ()
+    ignored_failed_request_patterns: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,18 @@ LISTING_RULE = DesktopRule(
     profile="home/section/listing",
     require_any_visible=("main", "article", "[role='main']", "h1", "table", "form", "a[href]"),
     min_links_in_content=0,
+    allowed_console_error_patterns=(
+        "ResizeObserver loop limit exceeded",
+        "Script error",
+        "Failed to load resource",
+    ),
+    ignored_failed_request_patterns=(
+        "googletagmanager",
+        "doubleclick",
+        "google-analytics",
+        "mc.yandex",
+        "/ads",
+    ),
 )
 
 ARTICLE_RULE = DesktopRule(
@@ -56,6 +73,18 @@ ARTICLE_RULE = DesktopRule(
         "h1",
     ),
     require_any_visible=("h1", "main", "article", "[role='main']", "[itemprop='articleBody']"),
+    allowed_console_error_patterns=(
+        "ResizeObserver loop limit exceeded",
+        "Script error",
+        "Failed to load resource",
+    ),
+    ignored_failed_request_patterns=(
+        "googletagmanager",
+        "doubleclick",
+        "google-analytics",
+        "mc.yandex",
+        "/ads",
+    ),
 )
 
 STATS_RULE = DesktopRule(
@@ -67,6 +96,19 @@ STATS_RULE = DesktopRule(
         "[class*='widget']",
         "[data-widget]",
         "[data-testid*='table']",
+    ),
+    allowed_console_error_patterns=(
+        "ResizeObserver loop limit exceeded",
+        "Script error",
+        "Failed to load resource",
+    ),
+    ignored_failed_request_patterns=(
+        "googletagmanager",
+        "doubleclick",
+        "google-analytics",
+        "mc.yandex",
+        "/ads",
+        "/polling",
     ),
 )
 
@@ -81,6 +123,18 @@ SERVICE_RULE = DesktopRule(
         ".content",
         ".page-content",
     ),
+    allowed_console_error_patterns=(
+        "ResizeObserver loop limit exceeded",
+        "Script error",
+        "Failed to load resource",
+    ),
+    ignored_failed_request_patterns=(
+        "googletagmanager",
+        "doubleclick",
+        "google-analytics",
+        "mc.yandex",
+        "/ads",
+    ),
 )
 
 SPECIAL_DYNAMIC_RULE = DesktopRule(
@@ -92,6 +146,19 @@ SPECIAL_DYNAMIC_RULE = DesktopRule(
         "table",
         "[class*='table']",
         "[class*='widget']",
+    ),
+    allowed_console_error_patterns=(
+        "ResizeObserver loop limit exceeded",
+        "Script error",
+        "Failed to load resource",
+    ),
+    ignored_failed_request_patterns=(
+        "googletagmanager",
+        "doubleclick",
+        "google-analytics",
+        "mc.yandex",
+        "/ads",
+        "/polling",
     ),
 )
 

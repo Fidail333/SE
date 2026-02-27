@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, cast
 
@@ -10,6 +11,7 @@ from allure_commons.types import AttachmentType
 from playwright.sync_api import Page
 
 from fixtures.browser import *  # noqa: F403
+from utils.failure_taxonomy import build_allure_categories_payload, classify_failure_text
 from utils.retries import is_transient_error
 
 
@@ -29,10 +31,12 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]):
 
     expected = "Стабильное отображение элемента/состояния согласно сценарию"
     actual = str(report.longrepr)
+    failure_category = classify_failure_text(actual)
     details = {
         "Где упало": item.nodeid,
         "Ожидали": expected,
         "Получили": actual,
+        "Классификация": failure_category,
         "URL": page.url,
         "Секция": funcargs.get("section_name", "не задана"),
         "Таймауты": "Использованы таймауты из fixtures/context (см. settings).",
@@ -52,4 +56,25 @@ def pytest_exception_interact(node: pytest.Item, call: pytest.CallInfo[None], re
 
 @pytest.fixture(scope="session", autouse=True)
 def ensure_allure_results_dir() -> None:
-    Path("allure-results").mkdir(parents=True, exist_ok=True)
+    results_dir = Path("allure-results")
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    categories_path = results_dir / "categories.json"
+    categories_path.write_text(
+        json.dumps(build_allure_categories_payload(), ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    environment_path = results_dir / "environment.properties"
+    test_env = os.getenv("TEST_ENV", "local")
+    base_url = os.getenv("BASE_URL", "https://www.sport-express.ru")
+    environment_path.write_text(
+        "\n".join(
+            [
+                f"TEST_ENV={test_env}",
+                f"BASE_URL={base_url}",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
