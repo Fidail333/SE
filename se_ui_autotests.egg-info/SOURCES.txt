@@ -11,6 +11,8 @@ data/__init__.py
 data/search_queries.py
 data/sections.py
 data/tournaments.py
+data/ui_desktop_rules.py
+data/urls.py
 fixtures/__init__.py
 fixtures/browser.py
 pages/__init__.py

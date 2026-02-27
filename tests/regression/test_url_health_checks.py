@@ -15,7 +15,7 @@ from utils.http_health import (
 )
 
 
-pytestmark = pytest.mark.regression
+pytestmark = [pytest.mark.regression, pytest.mark.http]
 
 
 def _case_id(url: str) -> str:
@@ -53,7 +53,7 @@ def _attach_rules_artifacts(resolved: ResolvedHealthRules) -> None:
 
     if resolved.is_special:
         allure.dynamic.label("health_rules", "special")
-        with allure.step("Special health rules applied (dynamic or non-HTML page)"):
+        with allure.step("Применены специальные правила health (динамическая или не-HTML страница)"):
             if resolved.reason:
                 allure.attach(resolved.reason, name="special_rules_reason", attachment_type=allure.attachment_type.TEXT)
 
@@ -68,11 +68,11 @@ URL_PARAMS = [
 ]
 
 
-@allure.epic("SE URL Health")
-@allure.feature("HTTP/HTML checks")
+@allure.epic("СЭ URL Health")
+@allure.feature("HTTP/HTML проверки")
 @pytest.mark.parametrize("url", URL_PARAMS)
 def test_url_health(url: str) -> None:
-    allure.dynamic.title(f"URL health: {_case_id(url)}")
+    allure.dynamic.title(f"Проверка URL health: {_case_id(url)}")
     response = request_with_retry(url)
     resolved_rules = resolve_health_rules(url)
 
@@ -88,10 +88,10 @@ def test_url_health(url: str) -> None:
     assert_positive_html_health(response, resolved_rules=resolved_rules)
 
 
-@allure.epic("SE URL Health")
-@allure.feature("HTTP negative checks")
+@allure.epic("СЭ URL Health")
+@allure.feature("HTTP негативные проверки")
 @pytest.mark.smoke
-@allure.title("Negative URL returns 404/410")
+@allure.title("Негативный URL возвращает 404/410")
 def test_negative_url_health() -> None:
     response = request_with_retry(NEGATIVE_URL)
     _attach_response_artifacts(
@@ -102,4 +102,4 @@ def test_negative_url_health() -> None:
         body=response.body,
     )
 
-    assert response.status_code in {404, 410}, f"Expected 404/410, got {response.status_code}"
+    assert response.status_code in {404, 410}, f"Ожидали 404/410, получили {response.status_code}"

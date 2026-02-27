@@ -34,6 +34,9 @@ addopts = "-ra --strict-markers --alluredir=allure-results"
 markers = [
   "smoke: critical smoke checks",
   "regression: wider regression checks",
+  "desktop: desktop UI checks",
+  "http: HTTP health checks",
+  "legacy: legacy skipped suites",
   "ui: ui tests",
   "flaky: potentially unstable tests with controlled rerun",
 ]

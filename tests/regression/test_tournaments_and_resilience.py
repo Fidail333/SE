@@ -5,7 +5,10 @@ import os
 import allure
 import pytest
 
-pytestmark = pytest.mark.skip(reason="replaced by URL health checks")
+pytestmark = [
+    pytest.mark.legacy,
+    pytest.mark.skip(reason="legacy suite replaced by desktop URL matrix"),
+]
 
 
 from data.tournaments import TOURNAMENT_PATHS

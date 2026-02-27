@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import json
 from urllib.parse import urljoin
 
 import allure
-import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from core.config import get_settings
+from utils.retries import is_transient_error
+from utils.ui_desktop_health import assert_no_antibot, attach_navigation_payload
 
 
 class BasePage:
-    _DEFAULT_PAGE_ANCHOR_SELECTORS = ("header", "nav", "main", "h1")
+    _DEFAULT_PAGE_ANCHOR_SELECTORS = ("header", "nav", "main", "[role='main']", "article", "h1")
 
     def __init__(self, page: Page) -> None:
         self.page = page
@@ -19,12 +21,56 @@ class BasePage:
     def open_path(self, path: str = "/") -> None:
         target = urljoin(f"{self.settings.base_url}/", path.lstrip("/"))
         navigation_timeout_ms = max(self.settings.navigation_timeout_ms, 30000)
-        with allure.step(f"Открыть URL: {target}"):
-            self.page.goto(target, wait_until="domcontentloaded", timeout=navigation_timeout_ms)
-            self.page.wait_for_load_state("load", timeout=navigation_timeout_ms)
-            self.wait_for_page_anchor(timeout_ms=navigation_timeout_ms)
-            self._handle_overlays()
-            self._skip_if_antibot_detected()
+        total_attempts = max(1, self.settings.retries + 1)
+
+        for attempt in range(1, total_attempts + 1):
+            response_status: int | None = None
+            try:
+                with allure.step(f"Открыть URL: {target} (попытка {attempt}/{total_attempts})"):
+                    response = self.page.goto(target, wait_until="domcontentloaded", timeout=navigation_timeout_ms)
+                    response_status = response.status if response else None
+                    self.page.wait_for_load_state("load", timeout=navigation_timeout_ms)
+                    self.wait_for_page_anchor(timeout_ms=navigation_timeout_ms)
+                    self._handle_overlays()
+                    self._assert_no_antibot_detected()
+                    attach_navigation_payload(self.page, requested_url=target, response_status=response_status)
+                    return
+            except Exception as exc:
+                transient = is_transient_error(str(exc))
+                self._attach_navigation_error(
+                    requested_url=target,
+                    attempt=attempt,
+                    total_attempts=total_attempts,
+                    response_status=response_status,
+                    error_text=str(exc),
+                    transient=transient,
+                )
+                if attempt >= total_attempts or not transient:
+                    raise
+
+    def _attach_navigation_error(
+        self,
+        requested_url: str,
+        attempt: int,
+        total_attempts: int,
+        response_status: int | None,
+        error_text: str,
+        transient: bool,
+    ) -> None:
+        payload = {
+            "requested_url": requested_url,
+            "final_url": self.page.url,
+            "status_code": response_status,
+            "attempt": attempt,
+            "total_attempts": total_attempts,
+            "transient": transient,
+            "error": error_text,
+        }
+        allure.attach(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            name=f"navigation_error_attempt_{attempt}",
+            attachment_type=allure.attachment_type.JSON,
+        )
 
     def wait_ready(self) -> None:
         expect(self.page.locator("body")).to_be_visible()
@@ -68,24 +114,8 @@ class BasePage:
                 if locator.count() > 0 and locator.is_visible(timeout=1000):
                     locator.click(timeout=3000)
 
-    def _skip_if_antibot_detected(self) -> None:
-        title = self.page.title().lower()
-        text = self.page.locator("body").inner_text(timeout=3000).lower()
-        antibot_markers = [
-            "access denied",
-            "captcha",
-            "cloudflare",
-            "ddos",
-            "verify you are human",
-            "проверка, что вы не робот",
-            "доступ временно ограничен",
-            "подозрительная активность",
-        ]
-        if any(marker in title or marker in text for marker in antibot_markers):
-            pytest.skip(
-                "Обнаружена антибот-защита/капча на странице. "
-                f"URL='{self.page.url}', title='{self.page.title()}'"
-            )
+    def _assert_no_antibot_detected(self) -> None:
+        assert_no_antibot(self.page)
 
     def safe_click(self, locator: Locator, step_name: str) -> None:
         with allure.step(step_name):

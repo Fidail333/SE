@@ -17,7 +17,7 @@ class Settings:
     slowmo_ms: int = int(os.getenv("SLOWMO", "0"))
     default_timeout_ms: int = int(os.getenv("DEFAULT_TIMEOUT", "10000"))
     navigation_timeout_ms: int = int(os.getenv("NAV_TIMEOUT", "25000"))
-    retries: int = int(os.getenv("RETRIES", "0"))
+    retries: int = int(os.getenv("RETRIES", "1"))
     auth_username: str | None = os.getenv("SE_AUTH_USERNAME")
     auth_password: str | None = os.getenv("SE_AUTH_PASSWORD")
 
