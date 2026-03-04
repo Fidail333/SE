@@ -66,7 +66,7 @@ def ensure_allure_results_dir() -> None:
     )
 
     environment_path = results_dir / "environment.properties"
-    test_env = os.getenv("TEST_ENV", "local")
+    test_env = os.getenv("TEST_ENV", "prod")
     base_url = os.getenv("BASE_URL", "https://www.sport-express.ru")
     environment_path.write_text(
         "\n".join(

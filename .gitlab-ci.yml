@@ -55,8 +55,7 @@ desktop_smoke_env0:
     TEST_MODE: "smoke"
     BASE_URL: "http://www.sport-express.env0/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*env0\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 desktop_smoke_env3:
@@ -66,8 +65,7 @@ desktop_smoke_env3:
     TEST_MODE: "smoke"
     BASE_URL: "http://www.sport-express.env3/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*env3\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 desktop_smoke_prod:
@@ -78,8 +76,7 @@ desktop_smoke_prod:
     TEST_MODE: "smoke"
     BASE_URL: "https://www.sport-express.ru/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*prod\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 desktop_regression_env0:
@@ -89,8 +86,7 @@ desktop_regression_env0:
     TEST_MODE: "regression"
     BASE_URL: "http://www.sport-express.env0/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*env0\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 desktop_regression_env3:
@@ -100,8 +96,7 @@ desktop_regression_env3:
     TEST_MODE: "regression"
     BASE_URL: "http://www.sport-express.env3/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*env3\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 desktop_regression_prod:
@@ -112,8 +107,7 @@ desktop_regression_prod:
     TEST_MODE: "regression"
     BASE_URL: "https://www.sport-express.ru/"
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$RUN_ENVS =~ /(^|,)\s*prod\s*(,|$)/ && ($CI_PIPELINE_SOURCE == "push" || $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
     - when: never
 
 http_health:
