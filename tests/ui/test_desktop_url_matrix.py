@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import os
+import re
 from urllib.parse import urlparse
 
 import allure
@@ -31,6 +33,27 @@ def _case_id(url: str) -> str:
     return value or "home"
 
 
+def _case_title(url: str) -> str:
+    parsed = urlparse(url)
+    path = parsed.path or "/"
+    query = f"?{parsed.query}" if parsed.query else ""
+
+    if path == "/":
+        return "главная страница (/)"
+
+    normalized_path = path if path.endswith("/") else f"{path}/"
+    return f"{normalized_path}{query}"
+
+
+def _slugify_case_id(value: str) -> str:
+    normalized = re.sub(r"[^a-zA-Z0-9]+", "_", value).strip("_").lower()
+    if not normalized:
+        normalized = "home"
+    normalized = normalized[:80].rstrip("_")
+    short_hash = hashlib.md5(value.encode("utf-8")).hexdigest()[:8]
+    return f"{normalized}_{short_hash}"
+
+
 def _resolve_test_env() -> str:
     explicit = os.getenv("TEST_ENV", "").strip().lower()
     if explicit:
@@ -44,23 +67,11 @@ def _resolve_test_env() -> str:
     return "prod"
 
 
-URL_PARAMS = [
-    pytest.param(
-        url,
-        marks=[pytest.mark.smoke] if index < SMOKE_URLS_COUNT else [],
-        id=f"desktop:{_case_id(url)}",
-    )
-    for index, url in enumerate(URL_CASES)
-]
-
-
-@allure.epic("СЭ Desktop UI")
-@allure.feature("Матрица URL")
-@pytest.mark.parametrize("url", URL_PARAMS)
-def test_desktop_url_matrix(page, url: str) -> None:
+def _run_desktop_url_case(page, url: str) -> None:
     base = BasePage(page)
     resolved = resolve_rule_for_url(url)
-    allure.dynamic.title(f"Desktop UI проверка: {_case_id(url)}")
+    allure.dynamic.title(f"Проверка десктопного UI: {_case_title(url)}")
+    allure.dynamic.label("url_case", _case_id(url))
     allure.dynamic.label("desktop_profile", resolved.rule.profile)
     allure.dynamic.label("test_env", _resolve_test_env())
     run_id = os.getenv("RUN_ID") or os.getenv("CI_PIPELINE_ID") or ""
@@ -74,7 +85,7 @@ def test_desktop_url_matrix(page, url: str) -> None:
     with allure.step("Проверить отсутствие антибота/капчи"):
         assert_no_antibot(page)
 
-    with allure.step("Проверить базовую desktop-структуру"):
+    with allure.step("Проверить базовую десктоп-структуру"):
         assert_base_desktop_structure(page)
 
     with allure.step(f"Проверить профиль страницы: {resolved.rule.profile}"):
@@ -86,8 +97,34 @@ def test_desktop_url_matrix(page, url: str) -> None:
     with allure.step("Проверить контентные инварианты"):
         assert_content_invariants(page=page, resolved=resolved)
 
-    with allure.step("Сводка JS/Network"):
+    with allure.step("Сводка JS/сети"):
         context_data = attach_js_network_summary(page)
 
-    with allure.step("Проверить JS/Network health"):
+    with allure.step("Проверить состояние JS/сети"):
         assert_js_health(page=page, resolved=resolved, context_data=context_data)
+
+
+def _build_desktop_test(url: str, index: int):
+    case_id = _case_id(url)
+    case_title = _case_title(url)
+    slug = _slugify_case_id(case_id)
+    test_name = f"test_desktop_ui_{index + 1:03d}_{slug}"
+
+    def _test(page, _url: str = url) -> None:
+        _run_desktop_url_case(page=page, url=_url)
+
+    _test.__name__ = test_name
+    _test.__qualname__ = test_name
+    _test.__doc__ = f"Проверка десктопного UI для URL: {case_title}"
+
+    decorated = allure.epic("СЭ Desktop UI")(_test)
+    decorated = allure.feature("Матрица URL")(decorated)
+    if index < SMOKE_URLS_COUNT:
+        decorated = pytest.mark.smoke(decorated)
+
+    return test_name, decorated
+
+
+for _index, _url in enumerate(URL_CASES):
+    _test_name, _test_fn = _build_desktop_test(url=_url, index=_index)
+    globals()[_test_name] = _test_fn
