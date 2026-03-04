@@ -109,8 +109,10 @@ def _build_desktop_test(url: str, index: int):
     case_title = _case_title(url)
     slug = _slugify_case_id(case_id)
     test_name = f"test_desktop_ui_{index + 1:03d}_{slug}"
+    allure_id = str(8000 + index + 1)
 
     def _test(page, _url: str = url) -> None:
+        allure.dynamic.id(allure_id)
         _run_desktop_url_case(page=page, url=_url)
 
     _test.__name__ = test_name
