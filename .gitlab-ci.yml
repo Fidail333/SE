@@ -31,7 +31,7 @@ stages:
   script:
     - rm -rf allure-results
     - export RUN_ID="${CI_PIPELINE_ID}-${CI_JOB_ID}"
-    - export ALLURE_LAUNCH_NAME="SE desktop ${TEST_ENV} ${TEST_MODE} #${CI_PIPELINE_ID}"
+    - 'export ALLURE_LAUNCH_NAME="SE desktop ${TEST_ENV} ${TEST_MODE} #${CI_PIPELINE_ID}"'
     - export ALLURE_LAUNCH_TAGS="desktop,${TEST_ENV},${TEST_MODE},${CI_PIPELINE_SOURCE},${CI_PIPELINE_ID}"
     - ./allurectl watch -- python -m pytest -m "desktop and ${TEST_MODE}" -v > "allurectl-${TEST_ENV}-${TEST_MODE}.log" 2>&1
     - cat "allurectl-${TEST_ENV}-${TEST_MODE}.log"
